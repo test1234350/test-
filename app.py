@@ -1,3 +1,7 @@
+import os
+st.write("Bestanden die de server nu ziet:", os.listdir("."))
+
+
 import streamlit as st
 import pandas as pd
 from pypdf import PdfReader
@@ -76,4 +80,5 @@ if uploaded_pdf and df_artikelen is not None:
 
 elif df_artikelen is not None:
     st.info("Upload een PDF om te beginnen met matchen over alle Excel-kolommen.")
+
 
