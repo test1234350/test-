@@ -7,8 +7,8 @@ import io
 st.set_page_config(page_title="Universal Artikel Matcher", layout="wide")
 st.title("🔍 Universele PDF naar Excel Matcher")
 
-# 1. Excel laden vanaf GitHub
-EXCEL_FILE = "artikelen.xlsx"
+# 1. Excel laden
+EXCEL_FILE = "artikelen.xlsx" 
 
 @st.cache_data
 def load_data():
@@ -76,3 +76,4 @@ if uploaded_pdf and df_artikelen is not None:
 
 elif df_artikelen is not None:
     st.info("Upload een PDF om te beginnen met matchen over alle Excel-kolommen.")
+
