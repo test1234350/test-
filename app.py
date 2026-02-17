@@ -1,5 +1,17 @@
-import os
-st.write("Bestanden die de server nu ziet:", os.listdir("."))
+import streamlit as st
+import pandas as pd
+import os  # <--- VOEG DEZE REGEL TOE
+from pypdf import PdfReader
+from rapidfuzz import fuzz
+import io
+
+st.title("Debug Overzicht")
+# Dit laat precies zien welke bestanden Streamlit "ziet" op de server
+st.write("Bestanden op de server:", os.listdir(".")) 
+
+# De rest van je code...
+EXCEL_FILE = "artikelen.xlsx"
+
 
 
 import streamlit as st
@@ -80,5 +92,6 @@ if uploaded_pdf and df_artikelen is not None:
 
 elif df_artikelen is not None:
     st.info("Upload een PDF om te beginnen met matchen over alle Excel-kolommen.")
+
 
 
