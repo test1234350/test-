@@ -3,52 +3,69 @@ import pandas as pd
 from pypdf import PdfReader
 import io
 
-st.title("PDF naar Excel Matcher 🔍")
+st.set_page_config(page_title="Artikel Matcher", layout="wide")
+st.title("🔍 PDF naar Artikelen Matcher")
 
-# 1. Laad de grote Excel van GitHub (zorg dat de naam klopt)
-EXCEL_FILE = "jouw_bestand.xlsx" # Pas deze naam aan!
+# 1. Excel laden vanaf GitHub
+# Zorg dat 'artikelen.xlsx' in dezelfde map staat op GitHub
+EXCEL_FILE = "artikelen.xlsx" 
 
 @st.cache_data
-def load_excel():
-    return pd.read_excel(EXCEL_FILE)
+def load_data():
+    try:
+        # We laden de Excel; pas de engine aan indien nodig (.xls vs .xlsx)
+        return pd.read_excel(EXCEL_FILE)
+    except Exception as e:
+        st.error(f"Fout: Kan '{EXCEL_FILE}' niet vinden op GitHub. Controleer de bestandsnaam.")
+        return None
 
-try:
-    df_excel = load_excel()
-    st.success(f"Excel-bestand '{EXCEL_FILE}' succesvol geladen!")
-except Exception as e:
-    st.error(f"Kon Excel niet vinden. Zorg dat {EXCEL_FILE} op GitHub staat.")
+df_artikelen = load_data()
 
-# 2. Upload de PDF
-uploaded_pdf = st.file_uploader("Upload een PDF om te matchen", type="pdf")
+# 2. PDF Uploaden
+uploaded_pdf = st.file_uploader("Upload je PDF bestand", type="pdf")
 
-if uploaded_pdf and 'df_excel' in locals():
-    # PDF tekst extraheren
-    reader = PdfReader(uploaded_pdf)
-    pdf_text = ""
-    for page in reader.pages:
-        pdf_text += page.extract_text() + " "
-    
-    st.info("PDF tekst succesvol uitgelezen. Zoeken naar matches...")
-
-    # 3. Matchen (voorbeeld: zoekt of tekst uit de Excel voorkomt in de PDF)
-    # We kijken hier in alle kolommen van de Excel
-    mask = df_excel.apply(lambda row: row.astype(str).str.lower().apply(lambda x: x in pdf_text.lower()).any(), axis=1)
-    matches = df_excel[mask]
-
-    if not matches.empty:
-        st.write(f"✅ {len(matches)} matches gevonden!")
-        st.dataframe(matches)
-
-        # 4. Downloaden als nieuwe Excel
-        buffer = io.BytesIO()
-        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-            matches.to_excel(writer, index=False)
+if uploaded_pdf and df_artikelen is not None:
+    with st.spinner('Bezig met uitlezen van PDF...'):
+        # PDF tekst extraheren
+        reader = PdfReader(uploaded_pdf)
+        pdf_text = ""
+        for page in reader.pages:
+            content = page.extract_text()
+            if content:
+                pdf_text += content + " "
         
-        st.download_button(
-            label="Download Matches als Excel",
-            data=buffer.getvalue(),
-            file_name="gevonden_matches.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+    if pdf_text.strip() == "":
+        st.warning("De PDF lijkt leeg of is een scan (afbeelding). Tekst kon niet worden gelezen.")
     else:
-        st.warning("Geen matches gevonden tussen de PDF en de Excel.")
+        st.info("PDF succesvol gelezen. Zoeken naar matches in je artikelenlijst...")
+
+        # 3. Matchen
+        # We zoeken of de waarden uit de Excel (als tekst) voorkomen in de PDF tekst
+        # Pas 'axis=1' aan als je specifiek in één kolom wilt zoeken voor meer snelheid
+        mask = df_artikelen.apply(lambda row: row.astype(str).apply(
+            lambda val: val.lower() in pdf_text.lower() if len(val) > 2 else False
+        ).any(), axis=1)
+        
+        matches = df_artikelen[mask]
+
+        if not matches.empty:
+            st.success(f"Gevonden: {len(matches)} artikelen komen overeen!")
+            st.dataframe(matches)
+
+            # 4. Resultaat exporteren naar een nieuwe Excel
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                matches.to_excel(writer, index=False, sheet_name='Gevonden Matches')
+            
+            st.download_button(
+                label="📥 Download Matches als Excel",
+                data=output.getvalue(),
+                file_name="gevonden_artikelen.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+        else:
+            st.warning("Geen van de artikelen uit je Excel zijn gevonden in de PDF.")
+
+elif df_artikelen is not None:
+    st.write("Wacht op PDF upload...")
+    st.write("Huidige database bevat", len(df_artikelen), "artikelen.")
